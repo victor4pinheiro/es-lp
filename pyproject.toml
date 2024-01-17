@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "es-lp"
+version = "0.1.0"
+description = ""
+authors = ["victor4pinheiro <victor.pinheiro.soft@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "3.12.1"
+elasticsearch = "^8.11.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
