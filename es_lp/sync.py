@@ -1,5 +1,4 @@
-from logging import log
-import logging
+from logging import error
 from database import connection
 import requests
 
@@ -33,7 +32,7 @@ def index_pokemon(index, pokemon):
     try:
         elasticsearch.create(index="pokemon", id=index, document=doc)
     except Exception:
-        logging.error(f"The {pokemon["name"]} already exists!")
+        error(f"The {pokemon["name"]} already exists!")
 
 
 def sync():
