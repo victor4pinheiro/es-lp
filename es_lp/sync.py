@@ -1,8 +1,9 @@
+from logging import log
+import logging
 from database import connection
 import requests
 
 elasticsearch = connection.client
-
 
 def get_size_pokemons():
     url = "https://pokeapi.co/api/v2/pokemon"
@@ -29,7 +30,10 @@ def index_pokemon(index, pokemon):
     doc = {
         "name": pokemon["name"],
     }
-    elasticsearch.index(index="pokemon", id=index, document=doc)
+    try:
+        elasticsearch.create(index="pokemon", id=index, document=doc)
+    except Exception:
+        logging.error(f"The {pokemon["name"]} already exists!")
 
 
 def sync():
