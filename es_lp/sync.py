@@ -12,8 +12,9 @@ def get_size_pokemons():
 
 
 def get_data_json(url, only_pokemon=True) -> dict:
-    response = requests.get(url)
-    data = response.json()
+    with requests.get(url) as response:
+        data = response.json()
+
     if only_pokemon is True:
         return data.get("results", [])
     return data
@@ -31,13 +32,19 @@ def index_pokemon(index, pokemon):
     }
     try:
         elasticsearch.create(index="pokemon", id=index, document=doc)
-    except Exception:
-        error(f"The {pokemon["name"]} already exists!")
+    except Exception as e:
+        error(f"The {pokemon['name']} already exists! Error: {e}")
 
 
 def sync():
-    limit = get_size_pokemons()
-    pokemons = fetch_pokemon_data(limit)
+    try:
+        if elasticsearch.count(index="pokemon") != 0:
+            raise Exception("Data already exists")
 
-    for index, pokemon in enumerate(pokemons):
-        index_pokemon(index, pokemon)
+        limit = get_size_pokemons()
+        pokemons = fetch_pokemon_data(limit)
+
+        for index, pokemon in enumerate(pokemons):
+            index_pokemon(index, pokemon)
+    except Exception as e:
+        error(f"Error during synchronization: {e}")
