@@ -10,6 +10,7 @@ python = "3.12.1"
 elasticsearch = "^8.11.1"
 python-dotenv = "^1.0.0"
 requests = "^2.31.0"
+flask-marshmallow = "^1.1.0"
 
 
 [tool.poetry.group.dev.dependencies]
