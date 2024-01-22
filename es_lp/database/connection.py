@@ -1,4 +1,4 @@
-from utils import config
+from es_lp.utils import config
 from elasticsearch import Elasticsearch
 
 client = Elasticsearch(

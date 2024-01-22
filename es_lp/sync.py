@@ -1,5 +1,5 @@
 from logging import error
-from database import connection
+from es_lp.database import connection
 import requests
 
 elasticsearch = connection.client
