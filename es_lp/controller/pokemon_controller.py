@@ -15,7 +15,9 @@ def create_pokemon() -> Response:
     response = None
 
     if errors:
-        response = format_messages(messages={"type": "Validation errors", "errors": errors}, status=400)
+        response = format_messages(
+            messages={"type": "Validation errors", "errors": errors}, status=400
+        )
     else:
         try:
             pokemon = {"name": data["name"]}
@@ -37,6 +39,32 @@ def list_all_pokemons() -> Response:
     try:
         search_response = elastic_search.search(index="pokemon", size=max_pokemons)
         pokemons = search_response["hits"]["hits"]
+        output = pokemons_schema.dump(
+            [
+                {"_id": pokemon["_id"], "name": pokemon["_source"]["name"]}
+                for pokemon in pokemons
+            ]
+        )
+        response = format_messages({"pokemons": output}, 200)
+    except Exception as e:
+        response = format_messages(f"Error: {str(e)}", 500)
+
+    return response
+
+
+@pokemon_bp.get("/search")
+def custom_search_pokemon():
+    pokemons_schema = PokemonSchema(many=True)
+    queries_params = request.args
+
+    try:
+        custom_search_response = elastic_search.search(
+            index="pokemon",
+            size=int(queries_params.get("limit") or 10000),
+            query={"match": {"name": queries_params.get("name")}},
+        )
+
+        pokemons = custom_search_response["hits"]["hits"]
         output = pokemons_schema.dump(
             [
                 {"_id": pokemon["_id"], "name": pokemon["_source"]["name"]}
