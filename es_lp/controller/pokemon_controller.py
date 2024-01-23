@@ -1,43 +1,50 @@
-from flask import Blueprint, request, jsonify
-from es_lp.database.connection import client
+from logging import error
+from flask import Blueprint, Response, request
+from es_lp.database.connection import client as elastic_search
+from es_lp.middleware.messages import format_messages
 from es_lp.models.pokemon import PokemonSchema
 
 pokemon_bp = Blueprint("pokemon", __name__, url_prefix="/pokemons")
 
 
 @pokemon_bp.post("/")
-def create_pokemon():
+def create_pokemon() -> Response:
     pokemon_schema = PokemonSchema()
+    data = request.get_json()
+    errors = pokemon_schema.validate(data)
+    response = None
 
-    try:
-        data = request.get_json()
+    if errors:
+        response = format_messages(messages={"type": "Validation errors", "errors": errors}, status=400)
+    else:
+        try:
+            pokemon = {"name": data["name"]}
+            elastic_search.index(index="pokemon", document=pokemon)
+            response = format_messages("Pokemon created successfully", 201)
+        except Exception as e:
+            error({"message": f"Error: {str(e)}"})
+            response = format_messages("Pokemon created successfully", 500)
 
-        errors = pokemon_schema.validate(data)
-        if errors:
-            return jsonify({"message": "Validation errors", "errors": errors}), 400
-
-        elastic_search = client
-        pokemon = {"name": data["name"]}
-
-        elastic_search.index(index="pokemon", document=pokemon)
-        return jsonify({"message": "Pokemon created successfully"}), 201
-
-    except Exception as e:
-        return jsonify({"message": f"Error: {str(e)}"}), 500
+    return response
 
 
 @pokemon_bp.get("/")
-def list_all_pokemons():
+def list_all_pokemons() -> Response:
     pokemons_schema = PokemonSchema(many=True)
     max_pokemons = int(request.args.get("limit") or 10000)
+    response = None
+
     try:
-        elastic_search = client
-
-        response = elastic_search.search(index="pokemon", size=max_pokemons)
-        pokemons = response["hits"]["hits"]
-
-        output = pokemons_schema.dump([{'_id': pokemon['_id'], 'name': pokemon['_source']['name']} for pokemon in pokemons])
-
-        return jsonify({"pokemons": output}), 200
+        search_response = elastic_search.search(index="pokemon", size=max_pokemons)
+        pokemons = search_response["hits"]["hits"]
+        output = pokemons_schema.dump(
+            [
+                {"_id": pokemon["_id"], "name": pokemon["_source"]["name"]}
+                for pokemon in pokemons
+            ]
+        )
+        response = format_messages({"pokemons": output}, 200)
     except Exception as e:
-        return jsonify({"message": f"Error: {str(e)}"}), 500
+        response = format_messages(f"Error: {str(e)}", 500)
+
+    return response
