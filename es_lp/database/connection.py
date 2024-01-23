@@ -1,8 +1,8 @@
-from es_lp.utils import config
+from es_lp.config import environments
 from elasticsearch import Elasticsearch
 
 client = Elasticsearch(
     "https://localhost:9200/",
-    api_key=config.ELASTIC_API,
-    ca_certs=config.ELASTIC_CA_CERTS,
+    api_key=environments.ELASTIC_API,
+    ca_certs=environments.ELASTIC_CA_CERTS,
 )
