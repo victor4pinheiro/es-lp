@@ -1,8 +1,14 @@
 from logging import error
+
+from flask import Blueprint, Response, jsonify
 from es_lp.database import connection
 import requests
 
-elasticsearch = connection.client
+from es_lp.middleware.messages import format_messages
+
+elasticsearch = connection.environments
+pokeapi_bp = Blueprint("pokeapi", __name__, url_prefix="/pokeapi")
+
 
 def get_size_pokemons():
     url = "https://pokeapi.co/api/v2/pokemon"
@@ -12,12 +18,15 @@ def get_size_pokemons():
 
 
 def get_data_json(url, only_pokemon=True) -> dict:
-    with requests.get(url) as response:
-        data = response.json()
+    with requests.get(url) as results:
+        data = results.json()
+    
+    response = data
 
     if only_pokemon is True:
-        return data.get("results", [])
-    return data
+        response =  data.get("results", [])
+
+    return response
 
 
 def fetch_pokemon_data(limit):
@@ -36,7 +45,10 @@ def index_pokemon(index, pokemon):
         error(f"The {pokemon['name']} already exists! Error: {e}")
 
 
-def sync():
+@pokeapi_bp.get("/sync")
+def sync() -> Response:
+    response = format_messages("Pokemon created successfully", 201)
+
     try:
         if elasticsearch.count(index="pokemon") != 0:
             raise Exception("Data already exists")
@@ -46,5 +58,8 @@ def sync():
 
         for index, pokemon in enumerate(pokemons):
             index_pokemon(index, pokemon)
+
     except Exception as e:
         error(f"Error during synchronization: {e}")
+        response = format_messages("Error during synchronization", 500)
+    return response
